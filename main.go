@@ -49,7 +49,48 @@ func handler(w http.ResponseWriter, r *http.Request) {
     defer resp.Body.Close()
     body, _ := ioutil.ReadAll(resp.Body)
 
-    fmt.Fprintf(w, "Python 回傳結果：%s", string(body))
+//    fmt.Fprintf(w, "Python 回傳結果：%s", string(body))
+    // 定義結果結構
+    type CalcResult struct {
+        Result *float64 `json:"result,omitempty"`
+        Error  string   `json:"error,omitempty"`
+    }
+
+    var result CalcResult
+    json.Unmarshal(body, &result)
+
+    // 自訂格式化函式
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>計算結果</title>
+</head>
+<body>
+    <h1>兩數相加結果</h1>
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else}}
+        <p>加總結果是：{{formatFloat .Result}}</p>
+    {{end}}
+    <br>
+    <a href="/">🔙 回到加法頁</a>
+</body>
+</html>
+`
+
+    t := template.Must(template.New("calctmpl").Funcs(funcMap).Parse(tmpl))
+    t.Execute(w, result)
 }
 
 func temp_handler(w http.ResponseWriter, r *http.Request) {
