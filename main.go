@@ -83,8 +83,17 @@ func temp_handler(w http.ResponseWriter, r *http.Request) {
     var result TempResult
     json.Unmarshal(body, &result)
 
-    // 定義 HTML 模板
-    tmpl := `
+    // 建立模板並加上函式（解除指標並格式化）
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -96,18 +105,17 @@ func temp_handler(w http.ResponseWriter, r *http.Request) {
     {{if .Error}}
         <p style="color:red;">錯誤：{{.Error}}</p>
     {{else}}
-        {{if .Celsius}}<p>攝氏：{{printf "%.2f" .Celsius}} °C</p>{{end}}
-        {{if .Fahrenheit}}<p>華氏：{{printf "%.2f" .Fahrenheit}} °F</p>{{end}}
+        {{if .Celsius}}<p>攝氏：{{formatFloat .Celsius}} °C</p>{{end}}
+        {{if .Fahrenheit}}<p>華氏：{{formatFloat .Fahrenheit}} °F</p>{{end}}
     {{end}}
     <br>
     <a href="/temperature_convert">🔙 回到轉換頁</a>
 </body>
 </html>
-    `
+`
 
-    t := template.Must(template.New("result").Parse(tmpl))
+    t := template.Must(template.New("result").Funcs(funcMap).Parse(tmpl))
     t.Execute(w, result)
-
 }
 
 func main() {
