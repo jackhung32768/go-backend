@@ -71,7 +71,41 @@ func temp_handler(w http.ResponseWriter, r *http.Request) {
     defer resp.Body.Close()
     body, _ := ioutil.ReadAll(resp.Body)
 
-    fmt.Fprintf(w, "Python 回傳結果：%s", string(body))
+//    fmt.Fprintf(w, "Python 回傳結果：%s", string(body))
+    type TempResult struct {
+        Celsius    *float64 `json:"celsius,omitempty"`
+        Fahrenheit *float64 `json:"fahrenheit,omitempty"`
+        Error      string   `json:"error,omitempty"`
+    }
+
+    var result TempResult
+    json.Unmarshal(body, &result)
+
+    // 定義 HTML 模板
+    tmpl := `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>溫度轉換結果</title>
+</head>
+<body>
+    <h1>轉換結果</h1>
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else}}
+        {{if .Celsius}}<p>攝氏：{{printf "%.2f" .Celsius}} °C</p>{{end}}
+        {{if .Fahrenheit}}<p>華氏：{{printf "%.2f" .Fahrenheit}} °F</p>{{end}}
+    {{end}}
+    <br>
+    <a href="/temperature_convert">🔙 回到轉換頁</a>
+</body>
+</html>
+    `
+
+    t := template.Must(template.New("result").Parse(tmpl))
+    t.Execute(w, result)
+
 }
 
 func main() {
