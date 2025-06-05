@@ -621,6 +621,88 @@ func kg_lb_converter(w http.ResponseWriter, r *http.Request) {
     t.Execute(w, result)
 }
 
+func g_oz_converter(w http.ResponseWriter, r *http.Request) {
+    g := r.URL.Query().Get("g")
+    oz := r.URL.Query().Get("oz")
+
+    if g == "" && oz == "" {
+        http.ServeFile(w, r, "index_g_oz.html")
+        return
+    }
+
+    type Result struct {
+        G     *float64 `json:"g,omitempty"`
+        OZ    *float64 `json:"oz,omitempty"`
+        Error string   `json:"error,omitempty"`
+        RawG  string
+        RawOZ string
+    }
+
+    result := Result{
+        RawG:  g,
+        RawOZ: oz,
+    }
+
+    url := ""
+    port := os.Getenv("PORT")
+    if port == "" {
+        url = fmt.Sprintf("http://localhost:5000/convert_between_g_and_oz?g=%s&oz=%s", g, oz)
+    } else {
+        url = fmt.Sprintf("https://python-api-5rg4.onrender.com/convert_between_g_and_oz?g=%s&oz=%s", g, oz)
+    }
+
+    resp, err := http.Get(url)
+    if err != nil {
+        result.Error = "無法連接 Python API"
+    } else {
+        defer resp.Body.Close()
+        body, _ := ioutil.ReadAll(resp.Body)
+        json.Unmarshal(body, &result)
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>公克 / 盎司 轉換</title></head>
+<body>
+    <h1>公克 &lt;=&gt; 盎司 轉換器</h1>
+
+    <form method="get" action="/g_oz_converter">
+        公克：
+        <input type="text" name="g" placeholder="輸入公克" value="{{.RawG}}">
+        或
+        盎司：
+        <input type="text" name="oz" placeholder="輸入盎司" value="{{.RawOZ}}">
+        <button type="submit">轉換</button>
+    </form>
+    <br>
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .G}}
+        <p>公克：{{formatFloat .G}} g</p>
+    {{else if .OZ}}
+        <p>盎司：{{formatFloat .OZ}} oz</p>
+    {{end}}
+
+    <br>
+    <p><a href="/">⬅ 回主頁</a></p>
+</body>
+</html>
+`
+
+    t := template.Must(template.New("goz").Funcs(funcMap).Parse(tmpl))
+    t.Execute(w, result)
+}
+
 func home_page(w http.ResponseWriter, r *http.Request) {
     http.ServeFile(w, r, "index_all.html")
 }
@@ -637,6 +719,7 @@ func main() {
     http.HandleFunc("/meter_foot_converter", meter_foot_converter)
     http.HandleFunc("/yard_meter_converter", yard_meter_converter)
     http.HandleFunc("/kg_lb_converter", kg_lb_converter)
+    http.HandleFunc("/g_oz_converter", g_oz_converter)
 	
     fmt.Println("Go 伺服器啟動：localhost:8080")
 //    log.Fatal(http.ListenAndServe(":8080", nil))
