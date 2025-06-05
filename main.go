@@ -192,11 +192,99 @@ func temperature_converter(w http.ResponseWriter, r *http.Request) {
     t.Execute(w, result)
 }
 
+func inch_cm_converter(w http.ResponseWriter, r *http.Request) {
+    inch := r.URL.Query().Get("inch")
+    cm := r.URL.Query().Get("cm")
+
+    // 無輸入時顯示靜態頁面
+    if inch == "" && cm == "" {
+        http.ServeFile(w, r, "index_inch_cm.html")
+        return
+    }
+
+    type Result struct {
+        Inch       *float64 `json:"inch,omitempty"`
+        CM         *float64 `json:"cm,omitempty"`
+        Error      string   `json:"error,omitempty"`
+        RawInch    string
+        RawCM      string
+    }
+
+    result := Result{
+        RawInch: inch,
+        RawCM:   cm,
+    }
+
+    url := ""
+    port := os.Getenv("PORT")
+    if port == "" {
+        url = fmt.Sprintf("http://localhost:5000/convert_between_inch_and_cm?inch=%s&cm=%s", inch, cm)
+    } else {
+        url = fmt.Sprintf("https://python-api-5rg4.onrender.com/convert_between_inch_and_cm?inch=%s&cm=%s", inch, cm)
+    }
+
+    resp, err := http.Get(url)
+    if err != nil {
+        result.Error = "無法連接 Python API"
+    } else {
+        defer resp.Body.Close()
+        body, _ := ioutil.ReadAll(resp.Body)
+        json.Unmarshal(body, &result)
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>英吋 / 公分 轉換</title>
+</head>
+<body>
+    <h1>英吋 &lt;=&gt; 公分 轉換器</h1>
+
+    <form method="get" action="/inch_cm_converter">
+        英吋：
+        <input type="text" name="inch" placeholder="輸入英吋" value="{{.RawInch}}">
+        或
+        公分：
+        <input type="text" name="cm" placeholder="輸入公分" value="{{.RawCM}}">
+        <button type="submit">轉換</button>
+    </form>
+
+    <br>
+
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .Inch}}
+        <p>英吋：{{formatFloat .Inch}} in</p>
+    {{else if .CM}}
+        <p>公分：{{formatFloat .CM}} cm</p>
+    {{end}}
+
+    <br>
+</body>
+</html>
+`
+
+    t := template.Must(template.New("inchcm").Funcs(funcMap).Parse(tmpl))
+    t.Execute(w, result)
+}
+
 func main() {
     http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("."))))
-
+//inch_cm_converter
     http.HandleFunc("/adder", adder_handler)
     http.HandleFunc("/temperature_converter", temperature_converter)
+    http.HandleFunc("/inch_cm_converter", inch_cm_converter)
     fmt.Println("Go 伺服器啟動：localhost:8080")
 //    log.Fatal(http.ListenAndServe(":8080", nil))
     port := os.Getenv("PORT")
