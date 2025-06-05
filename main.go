@@ -538,6 +538,89 @@ func yard_meter_converter(w http.ResponseWriter, r *http.Request) {
     t.Execute(w, result)
 }
 
+func kg_lb_converter(w http.ResponseWriter, r *http.Request) {
+    kg := r.URL.Query().Get("kg")
+    lb := r.URL.Query().Get("lb")
+
+    if kg == "" && lb == "" {
+        http.ServeFile(w, r, "index_kg_lb.html")
+        return
+    }
+
+    type Result struct {
+        KG     *float64 `json:"kg,omitempty"`
+        LB     *float64 `json:"lb,omitempty"`
+        Error  string   `json:"error,omitempty"`
+        RawKG  string
+        RawLB  string
+    }
+
+    result := Result{
+        RawKG: kg,
+        RawLB: lb,
+    }
+
+    url := ""
+    port := os.Getenv("PORT")
+    if port == "" {
+        url = fmt.Sprintf("http://localhost:5000/convert_between_kg_and_lb?kg=%s&lb=%s", kg, lb)
+    } else {
+        url = fmt.Sprintf("https://python-api-5rg4.onrender.com/convert_between_kg_and_lb?kg=%s&lb=%s", kg, lb)
+    }
+
+    resp, err := http.Get(url)
+    if err != nil {
+        result.Error = "無法連接 Python API"
+    } else {
+        defer resp.Body.Close()
+        body, _ := ioutil.ReadAll(resp.Body)
+        json.Unmarshal(body, &result)
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>公斤 / 磅 轉換</title></head>
+<body>
+    <h1>公斤 &lt;=&gt; 磅 轉換器</h1>
+
+    <form method="get" action="/kg_lb_converter">
+        公斤：
+        <input type="text" name="kg" placeholder="輸入公斤" value="{{.RawKG}}">
+        或
+        磅：
+        <input type="text" name="lb" placeholder="輸入磅" value="{{.RawLB}}">
+        <button type="submit">轉換</button>
+    </form>
+    <br>
+
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .KG}}
+        <p>公斤：{{formatFloat .KG}} kg</p>
+    {{else if .LB}}
+        <p>磅：{{formatFloat .LB}} lb</p>
+    {{end}}
+
+    <br>
+    <p><a href="/">⬅ 回主頁</a></p>
+</body>
+</html>
+`
+
+    t := template.Must(template.New("kglb").Funcs(funcMap).Parse(tmpl))
+    t.Execute(w, result)
+}
+
 func home_page(w http.ResponseWriter, r *http.Request) {
     http.ServeFile(w, r, "index_all.html")
 }
@@ -553,6 +636,7 @@ func main() {
     http.HandleFunc("/mile_km_converter", mile_km_converter)
     http.HandleFunc("/meter_foot_converter", meter_foot_converter)
     http.HandleFunc("/yard_meter_converter", yard_meter_converter)
+    http.HandleFunc("/kg_lb_converter", kg_lb_converter)
 	
     fmt.Println("Go 伺服器啟動：localhost:8080")
 //    log.Fatal(http.ListenAndServe(":8080", nil))
