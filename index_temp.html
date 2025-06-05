@@ -5,17 +5,19 @@
     <title>溫度轉換器</title>
 </head>
 <body>
-    <h1>攝氏與華氏溫度轉換</h1>
-    <form action="/temperature_convert" method="get">
-        <label for="celsius">攝氏 (Celsius)：</label>
-        <input type="number" step="any" name="celsius">
-        <br><br>
-        <label for="fahrenheit">華氏 (Fahrenheit)：</label>
-        <input type="number" step="any" name="fahrenheit">
-        <br><br>
-        <small>請輸入其中一個欄位即可</small>
-        <br><br>
+    <h1>攝氏與華氏轉換</h1>
+    <form method="get" action="/temperature_converter">
+        攝氏：<input type="text" name="celsius" value="{{.RawCelsius}}">
+        →
+        華氏：<input type="text" name="fahrenheit" value="{{.RawFahrenheit}}">
         <button type="submit">轉換</button>
     </form>
+
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else}}
+        {{if .Celsius}}<p>攝氏：{{formatFloat .Celsius}} °C</p>{{end}}
+        {{if .Fahrenheit}}<p>華氏：{{formatFloat .Fahrenheit}} °F</p>{{end}}
+    {{end}}
 </body>
 </html>

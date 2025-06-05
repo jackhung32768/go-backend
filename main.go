@@ -29,7 +29,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 */
 
-func handler(w http.ResponseWriter, r *http.Request) {
+/*
+func adder_handler(w http.ResponseWriter, r *http.Request) {
     a := r.URL.Query().Get("a")
     b := r.URL.Query().Get("b")
 
@@ -84,7 +85,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
         <p>加總結果是：{{formatFloat .Result}}</p>
     {{end}}
     <br>
-    <a href="/">🔙 回到加法頁</a>
+    <a href="/adder">🔙 回到加法頁</a>
 </body>
 </html>
 `
@@ -93,7 +94,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     t.Execute(w, result)
 }
 
-func temp_handler(w http.ResponseWriter, r *http.Request) {
+func temperature_converter(w http.ResponseWriter, r *http.Request) {
     celsius := r.URL.Query().Get("celsius")
     fahrenheit := r.URL.Query().Get("fahrenheit")
 
@@ -150,7 +151,7 @@ func temp_handler(w http.ResponseWriter, r *http.Request) {
         {{if .Fahrenheit}}<p>華氏：{{formatFloat .Fahrenheit}} °F</p>{{end}}
     {{end}}
     <br>
-    <a href="/temperature_convert">🔙 回到轉換頁</a>
+    <a href="/temperature_converter">🔙 回到轉換頁</a>
 </body>
 </html>
 `
@@ -158,10 +159,93 @@ func temp_handler(w http.ResponseWriter, r *http.Request) {
     t := template.Must(template.New("result").Funcs(funcMap).Parse(tmpl))
     t.Execute(w, result)
 }
+*/
+
+func adder_handler(w http.ResponseWriter, r *http.Request) {
+    a := r.URL.Query().Get("a")
+    b := r.URL.Query().Get("b")
+
+    // 定義結果結構
+    type CalcResult struct {
+        A      string
+        B      string
+        Result *float64 `json:"result,omitempty"`
+        Error  string   `json:"error,omitempty"`
+    }
+
+    result := CalcResult{A: a, B: b}
+
+    if a != "" && b != "" {
+        url := fmt.Sprintf("https://python-api-5rg4.onrender.com/calc?a=%s&b=%s", a, b)
+        resp, err := http.Get(url)
+        if err != nil {
+            result.Error = "無法連接 Python API"
+        } else {
+            defer resp.Body.Close()
+            body, _ := ioutil.ReadAll(resp.Body)
+            json.Unmarshal(body, &result)
+        }
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    t := template.Must(template.New("index").Funcs(funcMap).ParseFiles("index.html"))
+    t.Execute(w, result)
+}
+
+func temperature_converter(w http.ResponseWriter, r *http.Request) {
+    celsius := r.URL.Query().Get("celsius")
+    fahrenheit := r.URL.Query().Get("fahrenheit")
+
+    type TempResult struct {
+        Celsius    *float64 `json:"celsius,omitempty"`
+        Fahrenheit *float64 `json:"fahrenheit,omitempty"`
+        Error      string   `json:"error,omitempty"`
+        RawCelsius string
+        RawFahrenheit string
+    }
+
+    result := TempResult{RawCelsius: celsius, RawFahrenheit: fahrenheit}
+
+    if celsius != "" || fahrenheit != "" {
+        url := fmt.Sprintf(
+            "https://python-api-5rg4.onrender.com/convert_between_celsius_and_fahrenheit?celsius=%s&fahrenheit=%s",
+            celsius, fahrenheit)
+
+        resp, err := http.Get(url)
+        if err != nil {
+            result.Error = "無法連接 Python API"
+        } else {
+            defer resp.Body.Close()
+            body, _ := ioutil.ReadAll(resp.Body)
+            json.Unmarshal(body, &result)
+        }
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    t := template.Must(template.New("index_temp").Funcs(funcMap).ParseFiles("index_temp.html"))
+    t.Execute(w, result)
+}
+
 
 func main() {
-    http.HandleFunc("/", handler)
-    http.HandleFunc("/temperature_convert", temp_handler)
+    http.HandleFunc("/adder", adder_handler)
+    http.HandleFunc("/temperature_converter", temperature_converter)
     fmt.Println("Go 伺服器啟動：localhost:8080")
 //    log.Fatal(http.ListenAndServe(":8080", nil))
     port := os.Getenv("PORT")

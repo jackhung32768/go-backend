@@ -2,18 +2,21 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Go + Python Calculator</title>
+    <title>加法器</title>
 </head>
 <body>
     <h1>兩數相加</h1>
-    <form action="/" method="get">
-        <label for="a">數字 A：</label>
-        <input type="number" name="a" required>
-        <br><br>
-        <label for="b">數字 B：</label>
-        <input type="number" name="b" required>
-        <br><br>
-        <button type="submit">送出計算</button>
+    <form method="get" action="/adder">
+        <input type="text" name="a" value="{{.A}}" placeholder="輸入 a">
+        +
+        <input type="text" name="b" value="{{.B}}" placeholder="輸入 b">
+        <button type="submit">計算</button>
     </form>
+
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .Result}}
+        <p>加總結果是：{{formatFloat .Result}}</p>
+    {{end}}
 </body>
 </html>
