@@ -196,11 +196,24 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
         },
     }
 
+/*
     t := template.Must(template.New("index").Funcs(funcMap).ParseFiles("index.html"))
 //    t.Execute(w, result)
     if err := t.Execute(w, result); err != nil {
         log.Println("執行模板錯誤:", err)
         http.Error(w, "內部錯誤", http.StatusInternalServerError)
+    }
+	*/
+    t, err := template.New("index").Funcs(funcMap).ParseFiles("index.html")
+    if err != nil {
+        log.Println("模板載入失敗:", err)
+        http.Error(w, "模板載入錯誤", http.StatusInternalServerError)
+        return
+    }
+    err = t.Execute(w, result)
+    if err != nil {
+        log.Println("模板執行錯誤:", err)
+        http.Error(w, "執行模板失敗", http.StatusInternalServerError)
     }
 }
 
@@ -252,6 +265,8 @@ func temperature_converter(w http.ResponseWriter, r *http.Request) {
 
 
 func main() {
+    http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("."))))
+
     http.HandleFunc("/adder", adder_handler)
     http.HandleFunc("/temperature_converter", temperature_converter)
     fmt.Println("Go 伺服器啟動：localhost:8080")
