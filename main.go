@@ -81,6 +81,8 @@ const tmpl = `
     {{else if .Result}}
         <p>加總結果是：{{formatFloat .Result}}</p>
     {{end}}
+	<br>
+    <p><a href="/">⬅ 回主頁</a></p>
 </body>
 </html>
 `
@@ -184,6 +186,7 @@ func temperature_converter(w http.ResponseWriter, r *http.Request) {
     {{end}}
 
     <br>
+    <p><a href="/">⬅ 回主頁</a></p>
 </body>
 </html>
 `
@@ -271,6 +274,9 @@ func inch_cm_converter(w http.ResponseWriter, r *http.Request) {
     {{end}}
 
     <br>
+
+    <p><a href="/">⬅ 回主頁</a></p>
+
 </body>
 </html>
 `
@@ -357,6 +363,9 @@ func mile_km_converter(w http.ResponseWriter, r *http.Request) {
     {{end}}
 
     <br>
+
+    <p><a href="/">⬅ 回主頁</a></p>
+
 </body>
 </html>
 `
@@ -436,6 +445,10 @@ func meter_foot_converter(w http.ResponseWriter, r *http.Request) {
     {{else if .Foot}}
         <p>英尺：{{formatFloat .Foot}} ft</p>
     {{end}}
+
+    <br>
+    <p><a href="/">⬅ 回主頁</a></p>
+
 </body>
 </html>
 `
@@ -514,6 +527,10 @@ func yard_meter_converter(w http.ResponseWriter, r *http.Request) {
     {{else if .Meter}}
         <p>公尺：{{formatFloat .Meter}} m</p>
     {{end}}
+
+    <br>
+    <p><a href="/">⬅ 回主頁</a></p>
+
 </body>
 </html>
 `
@@ -521,10 +538,15 @@ func yard_meter_converter(w http.ResponseWriter, r *http.Request) {
     t.Execute(w, result)
 }
 
+func home_page(w http.ResponseWriter, r *http.Request) {
+    http.ServeFile(w, r, "index_all.html")
+}
+
 
 func main() {
     http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("."))))
 //inch_cm_converter
+    http.HandleFunc("/", home_page)
     http.HandleFunc("/adder", adder_handler)
     http.HandleFunc("/temperature_converter", temperature_converter)
     http.HandleFunc("/inch_cm_converter", inch_cm_converter)
