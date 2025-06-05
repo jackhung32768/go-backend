@@ -197,7 +197,11 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
     }
 
     t := template.Must(template.New("index").Funcs(funcMap).ParseFiles("index.html"))
-    t.Execute(w, result)
+//    t.Execute(w, result)
+    if err := t.Execute(w, result); err != nil {
+        log.Println("執行模板錯誤:", err)
+        http.Error(w, "內部錯誤", http.StatusInternalServerError)
+    }
 }
 
 func temperature_converter(w http.ResponseWriter, r *http.Request) {
@@ -239,7 +243,11 @@ func temperature_converter(w http.ResponseWriter, r *http.Request) {
     }
 
     t := template.Must(template.New("index_temp").Funcs(funcMap).ParseFiles("index_temp.html"))
-    t.Execute(w, result)
+//    t.Execute(w, result)
+    if err := t.Execute(w, result); err != nil {
+        log.Println("執行模板錯誤:", err)
+        http.Error(w, "內部錯誤", http.StatusInternalServerError)
+    }
 }
 
 
