@@ -29,7 +29,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 */
 
-/*
 func adder_handler(w http.ResponseWriter, r *http.Request) {
     a := r.URL.Query().Get("a")
     b := r.URL.Query().Get("b")
@@ -39,8 +38,14 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-//    url := fmt.Sprintf("http://localhost:5000/calc?a=%s&b=%s", a, b)
-    url := fmt.Sprintf("https://python-api-5rg4.onrender.com/calc?a=%s&b=%s", a, b)
+    url:=""
+    port := os.Getenv("PORT")
+    if port == "" {
+//        port = "8080"
+      url = fmt.Sprintf("http://localhost:5000/calc?a=%s&b=%s", a, b)
+    }else{
+      url = fmt.Sprintf("https://python-api-5rg4.onrender.com/calc?a=%s&b=%s", a, b)
+	}
 
     resp, err := http.Get(url)
     if err != nil {
@@ -52,10 +57,18 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
 
 //    fmt.Fprintf(w, "Python 回傳結果：%s", string(body))
     // 定義結果結構
+/*
     type CalcResult struct {
         Result *float64 `json:"result,omitempty"`
         Error  string   `json:"error,omitempty"`
     }
+*/
+type CalcResult struct {
+    A      string
+    B      string
+    Result *float64 `json:"result,omitempty"`
+    Error  string   `json:"error,omitempty"`
+}
 
     var result CalcResult
     json.Unmarshal(body, &result)
@@ -69,7 +82,7 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
             return fmt.Sprintf("%.2f", *f)
         },
     }
-
+/*
     const tmpl = `
 <!DOCTYPE html>
 <html>
@@ -89,11 +102,38 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
+*/
+
+const tmpl = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>兩數相加</title>
+</head>
+<body>
+    <h1>兩數相加</h1>
+
+    <form method="get" action="/adder">
+        <input type="text" name="a" placeholder="輸入 a" value="{{.A}}">
+        +
+        <input type="text" name="b" placeholder="輸入 b" value="{{.B}}">
+        <button type="submit">計算</button>
+    </form>
+
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .Result}}
+        <p>加總結果是：{{formatFloat .Result}}</p>
+    {{end}}
+</body>
+</html>
+`
 
     t := template.Must(template.New("calctmpl").Funcs(funcMap).Parse(tmpl))
     t.Execute(w, result)
 }
-
+/*
 func temperature_converter(w http.ResponseWriter, r *http.Request) {
     celsius := r.URL.Query().Get("celsius")
     fahrenheit := r.URL.Query().Get("fahrenheit")
@@ -210,7 +250,7 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
     }
 }
 */
-
+/*
 func adder_handler(w http.ResponseWriter, r *http.Request) {
     type CalcResult struct {
         A      string
@@ -252,7 +292,7 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
             return fmt.Sprintf("%.2f", *f)
         },
     }
-
+    fmt.Println("result.Result=",result.Result);
     t, err := template.New("index").Funcs(funcMap).ParseFiles("index.html")
     if err != nil {
         log.Println("模板載入失敗:", err)
@@ -265,7 +305,7 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "執行模板失敗", http.StatusInternalServerError)
     }
 }
-
+*/
 func temperature_converter(w http.ResponseWriter, r *http.Request) {
     celsius := r.URL.Query().Get("celsius")
     fahrenheit := r.URL.Query().Get("fahrenheit")

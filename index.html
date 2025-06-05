@@ -6,18 +6,11 @@
 </head>
 <body>
     <h1>兩數相加</h1>
-
-    <form method="post" action="/adder">
-        <input type="text" name="a" placeholder="輸入 a" {{if .A}}value="{{.A}}"{{end}}>
+    <form method="get" action="/adder">
+        <input type="text" name="a" placeholder="輸入 a">
         +
-        <input type="text" name="b" placeholder="輸入 b" {{if .B}}value="{{.B}}"{{end}}>
+        <input type="text" name="b" placeholder="輸入 b">
         <button type="submit">計算</button>
     </form>
-
-    {{if .Error}}
-        <p style="color:red;">錯誤：{{.Error}}</p>
-    {{else if .Result}}
-        <p>加總結果是：{{formatFloat .Result}}</p>
-    {{end}}
 </body>
 </html>
