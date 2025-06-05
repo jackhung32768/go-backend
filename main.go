@@ -365,6 +365,163 @@ func mile_km_converter(w http.ResponseWriter, r *http.Request) {
     t.Execute(w, result)
 }
 
+func meter_foot_converter(w http.ResponseWriter, r *http.Request) {
+    meter := r.URL.Query().Get("meter")
+    foot := r.URL.Query().Get("foot")
+
+    if meter == "" && foot == "" {
+        http.ServeFile(w, r, "index_meter_foot.html")
+        return
+    }
+
+    type Result struct {
+        Meter    *float64 `json:"meter,omitempty"`
+        Foot     *float64 `json:"foot,omitempty"`
+        Error    string   `json:"error,omitempty"`
+        RawMeter string
+        RawFoot  string
+    }
+
+    result := Result{
+        RawMeter: meter,
+        RawFoot:  foot,
+    }
+
+    url := ""
+    port := os.Getenv("PORT")
+    if port == "" {
+        url = fmt.Sprintf("http://localhost:5000/convert_between_meter_and_foot?meter=%s&foot=%s", meter, foot)
+    } else {
+        url = fmt.Sprintf("https://python-api-5rg4.onrender.com/convert_between_meter_and_foot?meter=%s&foot=%s", meter, foot)
+    }
+
+    resp, err := http.Get(url)
+    if err != nil {
+        result.Error = "無法連接 Python API"
+    } else {
+        defer resp.Body.Close()
+        body, _ := ioutil.ReadAll(resp.Body)
+        json.Unmarshal(body, &result)
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>公尺 / 英尺 轉換</title></head>
+<body>
+    <h1>公尺 &lt;=&gt; 英尺 轉換器</h1>
+
+    <form method="get" action="/meter_foot_converter">
+        公尺：
+        <input type="text" name="meter" placeholder="輸入公尺" value="{{.RawMeter}}">
+        或
+        英尺：
+        <input type="text" name="foot" placeholder="輸入英尺" value="{{.RawFoot}}">
+        <button type="submit">轉換</button>
+    </form>
+    <br>
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .Meter}}
+        <p>公尺：{{formatFloat .Meter}} m</p>
+    {{else if .Foot}}
+        <p>英尺：{{formatFloat .Foot}} ft</p>
+    {{end}}
+</body>
+</html>
+`
+    t := template.Must(template.New("meterfoot").Funcs(funcMap).Parse(tmpl))
+    t.Execute(w, result)
+}
+
+func yard_meter_converter(w http.ResponseWriter, r *http.Request) {
+    yard := r.URL.Query().Get("yard")
+    meter := r.URL.Query().Get("meter")
+
+    if yard == "" && meter == "" {
+        http.ServeFile(w, r, "index_yard_meter.html")
+        return
+    }
+
+    type Result struct {
+        Yard     *float64 `json:"yard,omitempty"`
+        Meter    *float64 `json:"meter,omitempty"`
+        Error    string   `json:"error,omitempty"`
+        RawYard  string
+        RawMeter string
+    }
+
+    result := Result{
+        RawYard:  yard,
+        RawMeter: meter,
+    }
+
+    url := ""
+    port := os.Getenv("PORT")
+    if port == "" {
+        url = fmt.Sprintf("http://localhost:5000/convert_between_yard_and_meter?yard=%s&meter=%s", yard, meter)
+    } else {
+        url = fmt.Sprintf("https://python-api-5rg4.onrender.com/convert_between_yard_and_meter?yard=%s&meter=%s", yard, meter)
+    }
+
+    resp, err := http.Get(url)
+    if err != nil {
+        result.Error = "無法連接 Python API"
+    } else {
+        defer resp.Body.Close()
+        body, _ := ioutil.ReadAll(resp.Body)
+        json.Unmarshal(body, &result)
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>碼 / 公尺 轉換</title></head>
+<body>
+    <h1>碼 &lt;=&gt; 公尺 轉換器</h1>
+
+    <form method="get" action="/yard_meter_converter">
+        碼：
+        <input type="text" name="yard" placeholder="輸入碼" value="{{.RawYard}}">
+        或
+        公尺：
+        <input type="text" name="meter" placeholder="輸入公尺" value="{{.RawMeter}}">
+        <button type="submit">轉換</button>
+    </form>
+    <br>
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .Yard}}
+        <p>碼：{{formatFloat .Yard}} yd</p>
+    {{else if .Meter}}
+        <p>公尺：{{formatFloat .Meter}} m</p>
+    {{end}}
+</body>
+</html>
+`
+    t := template.Must(template.New("yardmeter").Funcs(funcMap).Parse(tmpl))
+    t.Execute(w, result)
+}
+
+
 func main() {
     http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("."))))
 //inch_cm_converter
@@ -372,6 +529,8 @@ func main() {
     http.HandleFunc("/temperature_converter", temperature_converter)
     http.HandleFunc("/inch_cm_converter", inch_cm_converter)
     http.HandleFunc("/mile_km_converter", mile_km_converter)
+    http.HandleFunc("/meter_foot_converter", meter_foot_converter)
+    http.HandleFunc("/yard_meter_converter", yard_meter_converter)
 	
     fmt.Println("Go 伺服器啟動：localhost:8080")
 //    log.Fatal(http.ListenAndServe(":8080", nil))
