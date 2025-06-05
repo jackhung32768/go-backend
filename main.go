@@ -46,7 +46,8 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
     }else{
       url = fmt.Sprintf("https://python-api-5rg4.onrender.com/calc?a=%s&b=%s", a, b)
 	}
-
+//      url = fmt.Sprintf("https://python-api-5rg4.onrender.com/calc?a=%s&b=%s", a, b)
+    fmt.Println(url)
     resp, err := http.Get(url)
     if err != nil {
         http.Error(w, "無法連接 Python API", 500)
