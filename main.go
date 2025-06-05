@@ -279,12 +279,100 @@ func inch_cm_converter(w http.ResponseWriter, r *http.Request) {
     t.Execute(w, result)
 }
 
+func mile_km_converter(w http.ResponseWriter, r *http.Request) {
+    mile := r.URL.Query().Get("mile")
+    km := r.URL.Query().Get("km")
+
+    if mile == "" && km == "" {
+        http.ServeFile(w, r, "index_mile_km.html")
+        return
+    }
+
+    type Result struct {
+        Mile     *float64 `json:"mile,omitempty"`
+        KM       *float64 `json:"km,omitempty"`
+        Error    string   `json:"error,omitempty"`
+        RawMile  string
+        RawKM    string
+    }
+
+    result := Result{
+        RawMile: mile,
+        RawKM:   km,
+    }
+
+    url := ""
+    port := os.Getenv("PORT")
+    if port == "" {
+        url = fmt.Sprintf("http://localhost:5000/convert_between_mile_and_km?mile=%s&km=%s", mile, km)
+    } else {
+        url = fmt.Sprintf("https://python-api-5rg4.onrender.com/convert_between_mile_and_km?mile=%s&km=%s", mile, km)
+    }
+
+    resp, err := http.Get(url)
+    if err != nil {
+        result.Error = "無法連接 Python API"
+    } else {
+        defer resp.Body.Close()
+        body, _ := ioutil.ReadAll(resp.Body)
+        json.Unmarshal(body, &result)
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>英哩 / 公里 轉換</title>
+</head>
+<body>
+    <h1>英哩 &lt;=&gt; 公里 轉換器</h1>
+
+    <form method="get" action="/mile_km_converter">
+        英哩：
+        <input type="text" name="mile" placeholder="輸入英哩" value="{{.RawMile}}">
+        或
+        公里：
+        <input type="text" name="km" placeholder="輸入公里" value="{{.RawKM}}">
+        <button type="submit">轉換</button>
+    </form>
+
+    <br>
+
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .Mile}}
+        <p>英哩：{{formatFloat .Mile}} mi</p>
+    {{else if .KM}}
+        <p>公里：{{formatFloat .KM}} km</p>
+    {{end}}
+
+    <br>
+</body>
+</html>
+`
+
+    t := template.Must(template.New("milekm").Funcs(funcMap).Parse(tmpl))
+    t.Execute(w, result)
+}
+
 func main() {
     http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("."))))
 //inch_cm_converter
     http.HandleFunc("/adder", adder_handler)
     http.HandleFunc("/temperature_converter", temperature_converter)
     http.HandleFunc("/inch_cm_converter", inch_cm_converter)
+    http.HandleFunc("/mile_km_converter", mile_km_converter)
+	
     fmt.Println("Go 伺服器啟動：localhost:8080")
 //    log.Fatal(http.ListenAndServe(":8080", nil))
     port := os.Getenv("PORT")
