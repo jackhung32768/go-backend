@@ -703,6 +703,89 @@ func g_oz_converter(w http.ResponseWriter, r *http.Request) {
     t.Execute(w, result)
 }
 
+func tonne_ton_converter(w http.ResponseWriter, r *http.Request) {
+    tonne := r.URL.Query().Get("tonne")
+    ton := r.URL.Query().Get("ton")
+
+    if tonne == "" && ton == "" {
+        http.ServeFile(w, r, "index_tonne_ton.html")
+        return
+    }
+
+    type Result struct {
+        Tonne    *float64 `json:"tonne,omitempty"`
+        Ton      *float64 `json:"ton,omitempty"`
+        Error    string   `json:"error,omitempty"`
+        RawTonne string
+        RawTon   string
+    }
+
+    result := Result{
+        RawTonne: tonne,
+        RawTon:   ton,
+    }
+
+    url := ""
+    port := os.Getenv("PORT")
+    if port == "" {
+        url = fmt.Sprintf("http://localhost:5000/convert_between_tonne_and_ton?tonne=%s&ton=%s", tonne, ton)
+    } else {
+        url = fmt.Sprintf("https://python-api-5rg4.onrender.com/convert_between_tonne_and_ton?tonne=%s&ton=%s", tonne, ton)
+    }
+
+    resp, err := http.Get(url)
+    if err != nil {
+        result.Error = "無法連接 Python API"
+    } else {
+        defer resp.Body.Close()
+        body, _ := ioutil.ReadAll(resp.Body)
+        json.Unmarshal(body, &result)
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>公噸 / 英噸 轉換</title></head>
+<body>
+    <h1>公噸 &lt;=&gt; 英噸 轉換器</h1>
+
+    <form method="get" action="/tonne_ton_converter">
+        公噸：
+        <input type="text" name="tonne" placeholder="輸入公噸" value="{{.RawTonne}}">
+        或
+        英噸：
+        <input type="text" name="ton" placeholder="輸入英噸" value="{{.RawTon}}">
+        <button type="submit">轉換</button>
+    </form>
+    <br>
+
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .Tonne}}
+        <p>公噸：{{formatFloat .Tonne}} 公噸</p>
+    {{else if .Ton}}
+        <p>英噸：{{formatFloat .Ton}} 英噸</p>
+    {{end}}
+
+    <br>
+    <p><a href="/">⬅ 回主頁</a></p>
+</body>
+</html>
+`
+
+    t := template.Must(template.New("tonneton").Funcs(funcMap).Parse(tmpl))
+    t.Execute(w, result)
+}
+
 func home_page(w http.ResponseWriter, r *http.Request) {
     http.ServeFile(w, r, "index_all.html")
 }
@@ -720,6 +803,7 @@ func main() {
     http.HandleFunc("/yard_meter_converter", yard_meter_converter)
     http.HandleFunc("/kg_lb_converter", kg_lb_converter)
     http.HandleFunc("/g_oz_converter", g_oz_converter)
+    http.HandleFunc("/tonne_ton_converter", tonne_ton_converter)
 	
     fmt.Println("Go 伺服器啟動：localhost:8080")
 //    log.Fatal(http.ListenAndServe(":8080", nil))
