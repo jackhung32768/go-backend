@@ -134,6 +134,195 @@ const tmpl = `
     t := template.Must(template.New("calctmpl").Funcs(funcMap).Parse(tmpl))
     t.Execute(w, result)
 }
+
+func temperature_converter(w http.ResponseWriter, r *http.Request) {
+    celsius := r.URL.Query().Get("celsius")
+    fahrenheit := r.URL.Query().Get("fahrenheit")
+
+   // ✅ 沒有輸入參數，顯示靜態 HTML 頁面
+    if celsius == "" && fahrenheit == "" {
+        http.ServeFile(w, r, "index_temp.html")
+        return
+    }
+
+
+    type TempResult struct {
+        Celsius        *float64 `json:"celsius,omitempty"`
+        Fahrenheit     *float64 `json:"fahrenheit,omitempty"`
+        Error          string   `json:"error,omitempty"`
+        RawCelsius     string
+        RawFahrenheit  string
+    }
+
+    result := TempResult{
+        RawCelsius:    celsius,
+        RawFahrenheit: fahrenheit,
+    }
+
+    // 如果有輸入，呼叫 Python API
+    if celsius != "" || fahrenheit != "" {
+
+
+    url:=""
+    port := os.Getenv("PORT")
+    if port == "" {
+
+        url = fmt.Sprintf(
+            "http://localhost:5000/convert_between_celsius_and_fahrenheit?celsius=%s&fahrenheit=%s",
+            celsius, fahrenheit)
+
+
+
+    }else{
+        url = fmt.Sprintf(
+            "https://python-api-5rg4.onrender.com/convert_between_celsius_and_fahrenheit?celsius=%s&fahrenheit=%s",
+            celsius, fahrenheit)
+
+	}
+
+
+
+
+
+
+        resp, err := http.Get(url)
+        if err != nil {
+            result.Error = "無法連接 Python API"
+        } else {
+            defer resp.Body.Close()
+            body, _ := ioutil.ReadAll(resp.Body)
+            json.Unmarshal(body, &result)
+        }
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>攝氏 / 華氏轉換</title>
+</head>
+<body>
+    <h1>攝氏 &lt;=&gt; 華氏 轉換器</h1>
+
+    <form method="get" action="/temperature_converter">
+        攝氏：
+        <input type="text" name="celsius" placeholder="輸入攝氏" value="{{.RawCelsius}}">
+        或
+        華氏：
+        <input type="text" name="fahrenheit" placeholder="輸入華氏" value="{{.RawFahrenheit}}">
+        <button type="submit">轉換</button>
+    </form>
+
+    <br>
+
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else if .Celsius}}
+        <p>攝氏：{{formatFloat .Celsius}} °C</p>
+    {{else if .Fahrenheit}}
+        <p>華氏：{{formatFloat .Fahrenheit}} °F</p>
+    {{end}}
+
+    <br>
+</body>
+</html>
+`
+
+    t := template.Must(template.New("temp").Funcs(funcMap).Parse(tmpl))
+    t.Execute(w, result)
+}
+
+
+/*
+func temperature_converter(w http.ResponseWriter, r *http.Request) {
+    celsius := r.URL.Query().Get("celsius")
+    fahrenheit := r.URL.Query().Get("fahrenheit")
+
+    type TempResult struct {
+        Celsius        *float64 `json:"celsius,omitempty"`
+        Fahrenheit     *float64 `json:"fahrenheit,omitempty"`
+        Error          string   `json:"error,omitempty"`
+        RawCelsius     string
+        RawFahrenheit  string
+    }
+
+    result := TempResult{
+        RawCelsius:    celsius,
+        RawFahrenheit: fahrenheit,
+    }
+
+    if celsius != "" || fahrenheit != "" {
+        url := fmt.Sprintf(
+            "https://python-api-5rg4.onrender.com/convert_between_celsius_and_fahrenheit?celsius=%s&fahrenheit=%s",
+            celsius, fahrenheit,
+        )
+
+        resp, err := http.Get(url)
+        if err != nil {
+            result.Error = "無法連接 Python API"
+        } else {
+            defer resp.Body.Close()
+            body, _ := ioutil.ReadAll(resp.Body)
+            json.Unmarshal(body, &result)
+        }
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    // ✅ 內嵌 HTML 模板（不依賴 index_temp.html）
+    const tmpl = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>攝氏 / 華氏轉換</title>
+</head>
+<body>
+    <h1>溫度轉換</h1>
+    <form method="get" action="/temperature_converter">
+        攝氏：<input type="text" name="celsius" value="{{.RawCelsius}}">
+        或
+        華氏：<input type="text" name="fahrenheit" value="{{.RawFahrenheit}}">
+        <button type="submit">轉換</button>
+    </form>
+
+    {{if .Error}}
+        <p style="color:red;">錯誤：{{.Error}}</p>
+    {{else}}
+        {{if .Celsius}}<p>攝氏：{{formatFloat .Celsius}} °C</p>{{end}}
+        {{if .Fahrenheit}}<p>華氏：{{formatFloat .Fahrenheit}} °F</p>{{end}}
+    {{end}}
+
+    <br>
+    <a href="/adder">🔙 回到加法頁</a>
+</body>
+</html>
+`
+
+    t := template.Must(template.New("temp").Funcs(funcMap).Parse(tmpl))
+    if err := t.Execute(w, result); err != nil {
+        log.Println("模板執行錯誤:", err)
+        http.Error(w, "內部錯誤", http.StatusInternalServerError)
+    }
+}
+*/
 /*
 func temperature_converter(w http.ResponseWriter, r *http.Request) {
     celsius := r.URL.Query().Get("celsius")
@@ -307,6 +496,7 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
     }
 }
 */
+/*
 func temperature_converter(w http.ResponseWriter, r *http.Request) {
     celsius := r.URL.Query().Get("celsius")
     fahrenheit := r.URL.Query().Get("fahrenheit")
@@ -352,7 +542,7 @@ func temperature_converter(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "內部錯誤", http.StatusInternalServerError)
     }
 }
-
+*/
 
 func main() {
     http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("."))))

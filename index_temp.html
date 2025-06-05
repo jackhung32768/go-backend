@@ -2,22 +2,21 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>溫度轉換器</title>
+    <title>攝氏 / 華氏轉換</title>
 </head>
 <body>
-    <h1>攝氏與華氏轉換</h1>
+    <h1>攝氏 <=> 華氏 轉換器</h1>
+
     <form method="get" action="/temperature_converter">
-        攝氏：<input type="text" name="celsius" value="{{.RawCelsius}}">
-        →
-        華氏：<input type="text" name="fahrenheit" value="{{.RawFahrenheit}}">
+        攝氏：
+        <input type="text" name="celsius" placeholder="輸入攝氏">
+        或
+        華氏：
+        <input type="text" name="fahrenheit" placeholder="輸入華氏">
         <button type="submit">轉換</button>
     </form>
 
-    {{if .Error}}
-        <p style="color:red;">錯誤：{{.Error}}</p>
-    {{else}}
-        {{if .Celsius}}<p>攝氏：{{formatFloat .Celsius}} °C</p>{{end}}
-        {{if .Fahrenheit}}<p>華氏：{{formatFloat .Fahrenheit}} °F</p>{{end}}
-    {{end}}
+    <br>
+    <!-- 注意：這裡沒有結果顯示，因為是純靜態頁 -->
 </body>
 </html>
