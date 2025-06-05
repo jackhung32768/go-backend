@@ -161,6 +161,7 @@ func temperature_converter(w http.ResponseWriter, r *http.Request) {
 }
 */
 
+/*
 func adder_handler(w http.ResponseWriter, r *http.Request) {
     a := r.URL.Query().Get("a")
     b := r.URL.Query().Get("b")
@@ -196,14 +197,6 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
         },
     }
 
-/*
-    t := template.Must(template.New("index").Funcs(funcMap).ParseFiles("index.html"))
-//    t.Execute(w, result)
-    if err := t.Execute(w, result); err != nil {
-        log.Println("執行模板錯誤:", err)
-        http.Error(w, "內部錯誤", http.StatusInternalServerError)
-    }
-	*/
     t, err := template.New("index").Funcs(funcMap).ParseFiles("index.html")
     if err != nil {
         log.Println("模板載入失敗:", err)
@@ -212,6 +205,62 @@ func adder_handler(w http.ResponseWriter, r *http.Request) {
     }
     err = t.Execute(w, result)
     if err != nil {
+        log.Println("模板執行錯誤:", err)
+        http.Error(w, "執行模板失敗", http.StatusInternalServerError)
+    }
+}
+*/
+
+func adder_handler(w http.ResponseWriter, r *http.Request) {
+    type CalcResult struct {
+        A      string
+        B      string
+        Result *float64 `json:"result,omitempty"`
+        Error  string   `json:"error,omitempty"`
+    }
+
+    result := CalcResult{}
+
+    if r.Method == http.MethodPost {
+        if err := r.ParseForm(); err != nil {
+            result.Error = "表單解析錯誤"
+        } else {
+            result.A = r.FormValue("a")
+            result.B = r.FormValue("b")
+
+            if result.A != "" && result.B != "" {
+                url := fmt.Sprintf("https://python-api-5rg4.onrender.com/calc?a=%s&b=%s", result.A, result.B)
+                resp, err := http.Get(url)
+                if err != nil {
+                    result.Error = "無法連接 Python API"
+                } else {
+                    defer resp.Body.Close()
+                    body, _ := ioutil.ReadAll(resp.Body)
+                    json.Unmarshal(body, &result)
+                }
+            } else {
+                result.Error = "請輸入兩個數字"
+            }
+        }
+    }
+
+    funcMap := template.FuncMap{
+        "formatFloat": func(f *float64) string {
+            if f == nil {
+                return ""
+            }
+            return fmt.Sprintf("%.2f", *f)
+        },
+    }
+
+    t, err := template.New("index").Funcs(funcMap).ParseFiles("index.html")
+    if err != nil {
+        log.Println("模板載入失敗:", err)
+        http.Error(w, "模板載入錯誤", http.StatusInternalServerError)
+        return
+    }
+
+    if err := t.Execute(w, result); err != nil {
         log.Println("模板執行錯誤:", err)
         http.Error(w, "執行模板失敗", http.StatusInternalServerError)
     }

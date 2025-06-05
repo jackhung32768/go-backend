@@ -6,10 +6,11 @@
 </head>
 <body>
     <h1>兩數相加</h1>
-    <form method="get" action="/adder">
-        <input type="text" name="a" value="{{.A}}" placeholder="輸入 a">
+
+    <form method="post" action="/adder">
+        <input type="text" name="a" placeholder="輸入 a" {{if .A}}value="{{.A}}"{{end}}>
         +
-        <input type="text" name="b" value="{{.B}}" placeholder="輸入 b">
+        <input type="text" name="b" placeholder="輸入 b" {{if .B}}value="{{.B}}"{{end}}>
         <button type="submit">計算</button>
     </form>
 
